@@ -1,0 +1,4 @@
+name = "OutputParser"
+uuid = "554c801b-3592-4aac-babc-bdcf42564d4b"
+authors = ["Lucas Lang <lucas.lang@chem.tu-berlin.de>"]
+version = "0.1.0"

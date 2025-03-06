@@ -29,7 +29,7 @@ function parse_ORCA_structure(file::IOStream)
 end
 
 function parse_ORCA_structure(filename)
-    file = open(filename)
+    file = open(filename, "r")
     atoms, coordinates = parse_ORCA_structure(file)
     close(file)
     return atoms, coordinates
@@ -57,7 +57,7 @@ end
 This version is used if only one parse is supposed to be done and then the file closed again.
 """
 function parse_output(filename, searchstrings, linenumber, wordnumber)
-    file = open(filename)
+    file = open(filename, "r")
     word = parse_output(file, searchstrings, linenumber, wordnumber)
     close(file)
     return word

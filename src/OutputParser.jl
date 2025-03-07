@@ -1,6 +1,76 @@
 module OutputParser
 
-export parse_output, parse_float, parse_int, parse_ORCA_structure
+export parse_output, parse_float, parse_int, parse_ORCA_structure, parse_ZFStensor_Heff, parse_gtensor_EPRNMR, parse_Aiso_EPRNMR
+
+"""
+nuclei is a list of nuclei in the format "18H", where the number is the index in the
+xyz structure (starting counting at 0).
+"""
+function parse_Aiso_EPRNMR(file::IOStream, nuclei)
+    Aiso_values = Vector{Float64}(undef, 0)
+    for nucleus in nuclei
+        seekstart(file)   # move pointer back to beginning
+        searchstringfound, currentline = read_until_hit(file, ["ORCA EPR/NMR", "ELECTRIC AND MAGNETIC", " $nucleus ", "A(iso)"])
+        if searchstringfound
+            words = split(currentline)
+            Aiso = parse(Float64, words[6])
+            push!(Aiso_values, Aiso)
+        else
+            error("The combination of search strings was not found in the output file!")
+        end
+    end
+    return Aiso_values
+end
+
+function parse_Aiso_EPRNMR(filename, nuclei)
+    file = open(filename, "r")
+    Aiso_values = parse_Aiso_EPRNMR(file, nuclei)
+    close(file)
+    return Aiso_values
+end
+
+function parse_gtensor_EPRNMR(file::IOStream)
+    g = Matrix{Float64}(undef, 3, 3)
+    searchstringfound, currentline = read_until_hit(file, ["ORCA EPR/NMR", "The g-matrix"])
+    for row in 1:3
+        currentline = readline(file)
+	words = split(currentline)
+	for col in 1:3
+            g[row, col] = parse(Float64, words[col])
+        end
+    end
+    return g
+end
+
+function parse_gtensor_EPRNMR(filename)
+    file = open(filename, "r")
+    g = parse_gtensor_EPRNMR(file)
+    close(file)
+    return g
+end
+
+"""
+method can be either CASSCF or NEVPT2.
+"""
+function parse_ZFStensor_Heff(file::IOStream, method)
+    D = Matrix{Float64}(undef, 3, 3)
+    searchstringfound, currentline = read_until_hit(file, ["QDPT WITH $method DIAGONAL ENERGIES", "ZERO-FIELD", "EFFECTIVE", "Raw matrix"])
+    for row in 1:3
+        currentline = readline(file)
+	words = split(currentline)
+	for col in 1:3
+            D[row, col] = parse(Float64, words[col])
+        end
+    end
+    return D
+end
+
+function parse_ZFStensor_Heff(filename, method)
+    file = open(filename, "r")
+    D = parse_ZFStensor_Heff(file, method)
+    close(file)
+    return D
+end
 
 function parse_ORCA_structure(file::IOStream)
     searchstringfound, currentline = read_until_hit(file, ["CARTESIAN COORDINATES"])
@@ -82,7 +152,7 @@ function parse_type(file, searchstrings, linenumber, wordnumber, typ)
         parse(typ, str)
     catch e
         if isa(e, ArgumentError)
-            error("The word encountered at the specified location in the output file cannot be interpreted as type $(typ)!")
+            error("The word $str encountered at the specified location in the output file cannot be interpreted as type $(typ)!")
         else
             throw(e)
         end
